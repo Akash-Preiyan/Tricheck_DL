@@ -1,0 +1,15 @@
+Datasets/
+
+Models/
+*.pth
+*.pkl
+
+venv/
+__pycache__/
+*.pyc
+
+*.csv
+*.zip
+*.npy
+
+.ipynb_checkpoints/
