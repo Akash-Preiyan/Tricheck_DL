@@ -9,16 +9,24 @@ import torch
 import torch.nn as nn
 from typing import cast
 import torchvision.models as models
+from huggingface_hub import hf_hub_download
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "https://tricheck-dl.onrender.com",
+        "http://localhost:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
+heart_model_repo_id = "Akashaiml/cardio-model"
+alzheimer_model_repo_id = "Akashaiml/alzheimer-model"
+brain_model_repo_id = "Akashaiml/brainTumor-model"
 
 @app.get("/")
 def root():
@@ -57,8 +65,8 @@ def predict_heart_disease(data: HeartDiseaseInput):
         cholesterol, gluc, smoke, alco, active
     ]]
 
-    # Convert to numpy array and predict
-    model = joblib.load('./Models/cardiovascular.pkl')
+    heart_model_path = hf_hub_download(heart_model_repo_id, filename="cardiovascular.pkl")
+    model = joblib.load(heart_model_path)
     prediction = model.predict(np.array(input_data))
 
     reasons = []
@@ -95,9 +103,9 @@ def predict_heart_disease(data: HeartDiseaseInput):
 #ALZHEIMER DISEASE
 NUM_CLASSES = 4
 
-model = models.resnet50(pretrained=False)
-num_ftrs =model.fc.in_features
-model.fc = nn.Sequential(
+alzheimer_model = models.resnet50(pretrained=False)
+num_ftrs =alzheimer_model.fc.in_features
+alzheimer_model.fc = nn.Sequential(
     nn.Dropout(0.5),
     nn.Linear(num_ftrs, 256),
     nn.ReLU(),
@@ -105,11 +113,13 @@ model.fc = nn.Sequential(
     nn.Linear(256, NUM_CLASSES)
 ) #type: ignore
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = model.to(device)
+alzheimer_model = alzheimer_model.to(device)
 
-checkpoint = torch.load("./Models/best_alzheimer_model_complete.pth", map_location=device)
-model.load_state_dict(checkpoint['model_state_dict'])
-model.eval()
+alzheimer_filename = "best_alzheimer_model_complete.pth"
+alzheimer_model_path = hf_hub_download(repo_id=alzheimer_model_repo_id, filename=alzheimer_filename)
+checkpoint = torch.load(alzheimer_model_path, map_location=device)
+alzheimer_model.load_state_dict(checkpoint['model_state_dict'])
+alzheimer_model.eval()
 
 @app.post("/predict/alzheimer")
 async def predict_alzheimer(mri_image: UploadFile = File(...) ):
@@ -119,10 +129,10 @@ async def predict_alzheimer(mri_image: UploadFile = File(...) ):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tensor_image = tensor_image.to(device)
-    model.to(device)
+    alzheimer_model.to(device)
 
     with torch.no_grad():
-        outputs = model(tensor_image)
+        outputs = alzheimer_model(tensor_image)
         _, predicted = torch.max(outputs, 1)
         predicted_class = int(predicted.item())
 
@@ -153,10 +163,11 @@ brain_model.fc = nn.Sequential(
     nn.BatchNorm1d(256),
     nn.Dropout(0.2),
     nn.Linear(256, NUM_CLASSES)
-)
+)  # type: ignore
 brain_model = brain_model.to(device)
-
-brain_checkpoint = torch.load("./Models/best_brain_tumor_model_complete.pth", map_location=device)
+brain_filename = "best_brain_tumor_model_complete.pth"
+brain_model_path = hf_hub_download(brain_model_repo_id, brain_filename)
+brain_checkpoint = torch.load(brain_model_path, map_location=device)
 brain_model.load_state_dict(brain_checkpoint['model_state_dict'])
 brain_model.eval()
 
