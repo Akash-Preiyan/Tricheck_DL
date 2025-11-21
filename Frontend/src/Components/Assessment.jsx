@@ -22,13 +22,13 @@ const AssessmentWithDetails = () => {
   const handleSubmit = async () => {
     const data = formData[selected] || {};
     console.log("🧠 Full formData for", selected, ":\n", JSON.stringify(data, null, 2));
-
+    const BASE_URL ="https://akashaiml-tricheck-backend-repo.hf.space"
     try {
       let response;
 
       if (selected === 'heart') {
         response = await axios.post(
-          `http://127.0.0.1:8000/predict/${selected}`,
+          `${BASE_URL}/predict/${selected}`,
           data,
           { headers: { "Content-Type": "application/json" } }
         );
@@ -37,7 +37,7 @@ const AssessmentWithDetails = () => {
         formDataObj.append("mri_image", data.mri_image);
 
         response = await axios.post(
-          `http://127.0.0.1:8000/predict/${selected}`,
+          `${BASE_URL}/predict/${selected}`,
           formDataObj,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
